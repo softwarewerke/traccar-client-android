@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="app_name">Traccar Client</string>
+  <string name="app_name">SailTracc Client</string>
   <string name="app_logo">Traccar</string>
   <string name="shortcut_start">Start service</string>
   <string name="shortcut_stop">Stop service</string>
@@ -51,4 +51,5 @@
   <string name="request_background_option">Allow all the time</string>
   <string name="widget_description">Shows the service status</string>
   <string name="widget_label">Status widget</string>
+  <string name="menu_back">back</string>
 </resources>
