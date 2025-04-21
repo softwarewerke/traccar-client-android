@@ -38,6 +38,7 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.preference.EditTextPreference
 import androidx.preference.EditTextPreferenceDialogFragmentCompat
 import androidx.preference.Preference
@@ -45,6 +46,13 @@ import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.preference.TwoStatePreference
 import dev.doubledot.doki.ui.DokiActivity
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.GET
+import retrofit2.http.Query
 import java.util.*
 
 class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListener {
@@ -61,20 +69,23 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
         setPreferencesFromResource(R.xml.preferences, rootKey)
         initPreferences()
 
-        findPreference<Preference>(KEY_DEVICE)?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
-            newValue != null && newValue != ""
-        }
-        findPreference<Preference>(KEY_URL)?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
-            newValue != null && validateServerURL(newValue.toString())
-        }
-        findPreference<Preference>(KEY_INTERVAL)?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
-            try {
-                newValue != null && (newValue as String).toInt() > 0
-            } catch (e: NumberFormatException) {
-                Log.w(TAG, e)
-                false
+        findPreference<Preference>(KEY_DEVICE)?.onPreferenceChangeListener =
+            Preference.OnPreferenceChangeListener { _, newValue ->
+                newValue != null && newValue != ""
             }
-        }
+        findPreference<Preference>(KEY_URL)?.onPreferenceChangeListener =
+            Preference.OnPreferenceChangeListener { _, newValue ->
+                newValue != null && validateServerURL(newValue.toString())
+            }
+        findPreference<Preference>(KEY_INTERVAL)?.onPreferenceChangeListener =
+            Preference.OnPreferenceChangeListener { _, newValue ->
+                try {
+                    newValue != null && (newValue as String).toInt() > 0
+                } catch (e: NumberFormatException) {
+                    Log.w(TAG, e)
+                    false
+                }
+            }
         val numberValidationListener = Preference.OnPreferenceChangeListener { _, newValue ->
             try {
                 newValue != null && (newValue as String).toInt() >= 0
@@ -83,7 +94,8 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
                 false
             }
         }
-        findPreference<Preference>(KEY_DISTANCE)?.onPreferenceChangeListener = numberValidationListener
+        findPreference<Preference>(KEY_DISTANCE)?.onPreferenceChangeListener =
+            numberValidationListener
         findPreference<Preference>(KEY_ANGLE)?.onPreferenceChangeListener = numberValidationListener
 
         alarmManager = requireActivity().getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -143,11 +155,18 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
     override fun onResume() {
         super.onResume()
         sharedPreferences.registerOnSharedPreferenceChangeListener(this)
+        findPreference<Preference>(KEY_STATUS)?.isEnabled = false
+        hideMyConfigPrefs()
+        loadMyConfigPrefs()
     }
 
     override fun onPause() {
         super.onPause()
         sharedPreferences.unregisterOnSharedPreferenceChangeListener(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
     }
 
     private fun setPreferencesEnabled(enabled: Boolean) {
@@ -170,7 +189,8 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
             }
             (requireActivity().application as MainApplication).handleRatingFlow(requireActivity())
         } else if (key == KEY_DEVICE) {
-            findPreference<Preference>(KEY_DEVICE)?.summary = sharedPreferences?.getString(KEY_DEVICE, null)
+            findPreference<Preference>(KEY_DEVICE)?.summary =
+                sharedPreferences?.getString(KEY_DEVICE, null)
         }
     }
 
@@ -197,7 +217,8 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
             sharedPreferences.edit().putString(KEY_DEVICE, id).apply()
             findPreference<EditTextPreference>(KEY_DEVICE)?.text = id
         }
-        findPreference<Preference>(KEY_DEVICE)?.summary = sharedPreferences.getString(KEY_DEVICE, null)
+        findPreference<Preference>(KEY_DEVICE)?.summary =
+            sharedPreferences.getString(KEY_DEVICE, null)
     }
 
     private fun showBackgroundLocationDialog(context: Context, onSuccess: () -> Unit) {
@@ -217,20 +238,30 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
         var permission = initialPermission
         if (checkPermission) {
             val requiredPermissions: MutableSet<String> = HashSet()
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
                 requiredPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
             }
             permission = requiredPermissions.isEmpty()
             if (!permission) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    requestPermissions(requiredPermissions.toTypedArray(), PERMISSIONS_REQUEST_LOCATION)
+                    requestPermissions(
+                        requiredPermissions.toTypedArray(),
+                        PERMISSIONS_REQUEST_LOCATION
+                    )
                 }
                 return
             }
         }
         if (permission) {
             setPreferencesEnabled(false)
-            ContextCompat.startForegroundService(requireContext(), Intent(activity, TrackingService::class.java))
+            ContextCompat.startForegroundService(
+                requireContext(),
+                Intent(activity, TrackingService::class.java)
+            )
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                 alarmManager.setInexactRepeating(
                     AlarmManager.ELAPSED_REALTIME_WAKEUP,
@@ -239,13 +270,21 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-                && ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                && ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
                 requestingPermissions = true
                 showBackgroundLocationDialog(requireContext()) {
-                    requestPermissions(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), PERMISSIONS_REQUEST_BACKGROUND_LOCATION)
+                    requestPermissions(
+                        arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                        PERMISSIONS_REQUEST_BACKGROUND_LOCATION
+                    )
                 }
             } else {
-                requestingPermissions = BatteryOptimizationHelper().requestException(requireContext())
+                requestingPermissions =
+                    BatteryOptimizationHelper().requestException(requireContext())
             }
         } else {
             sharedPreferences.edit().putBoolean(KEY_STATUS, false).apply()
@@ -262,7 +301,11 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
         setPreferencesEnabled(true)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
         if (requestCode == PERMISSIONS_REQUEST_LOCATION) {
             var granted = true
             for (result in grantResults) {
@@ -291,6 +334,7 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
     companion object {
         private val TAG = MainFragment::class.java.simpleName
         private const val ALARM_MANAGER_INTERVAL = 15000
+        const val KEY_DEBUG = "debug"
         const val KEY_DEVICE = "id"
         const val KEY_URL = "url"
         const val KEY_INTERVAL = "interval"
@@ -304,4 +348,125 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
         private const val PERMISSIONS_REQUEST_BACKGROUND_LOCATION = 3
     }
 
+    private enum class PrefType {
+        STRING, NUMBER, BOOLEAN
+    }
+
+    private enum class SettingsAndroid(val pref: String, val type: PrefType) {
+        SETTING_ANDROID_DEBUG(KEY_DEBUG, PrefType.BOOLEAN),
+        SETTING_ANDROID_INTERVAL(KEY_INTERVAL, PrefType.NUMBER),
+        SETTING_ANDROID_ACCURACY(KEY_ACCURACY, PrefType.NUMBER),
+        SETTING_ANDROID_DISTANCE(KEY_DISTANCE, PrefType.NUMBER),
+        SETTING_ANDROID_ANGLE(KEY_ANGLE, PrefType.NUMBER),
+        SETTING_ANDROID_BUFFER(KEY_BUFFER, PrefType.BOOLEAN),
+        SETTING_ANDROID_WAKELOCK(KEY_WAKELOCK, PrefType.BOOLEAN)
+    }
+
+    private fun initMyConfigApi(url: String?): MyConfigService {
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        return retrofit.create(MyConfigService::class.java)
+    }
+
+    private fun loadMyConfigPrefs() {
+
+        var myConfigService = initMyConfigApi(sharedPreferences.getString(KEY_URL,""));
+        var device = sharedPreferences.getString(KEY_DEVICE, "") ?: ""
+        val call = myConfigService.getMyConfig(device)
+        call.enqueue(object : Callback<MyConfig> {
+
+            override fun onResponse(call: Call<MyConfig>, response: Response<MyConfig>) {
+                setMyConfigPrefs(response.body())
+                StatusActivity.addMessage("Config retrieved")
+                findPreference<Preference>(KEY_STATUS)?.isEnabled = true
+            }
+
+            override fun onFailure(call: Call<MyConfig>, t: Throwable) {
+                Log.e(TAG, t.toString())
+                StatusActivity.addMessage("[ERR] Cannot retrieve config: " + t.message)
+            }
+        })
+    }
+
+    private fun setMyConfigPrefs(myConfig: MyConfig?) {
+
+        if (myConfig == null) {
+            return
+        }
+
+        sharedPreferences.edit() {
+
+            val debug = myConfig.getPref(SettingsAndroid.SETTING_ANDROID_DEBUG.name)
+            if (debug is Boolean) {
+                putBoolean(SettingsAndroid.SETTING_ANDROID_DEBUG.pref, debug)
+                commit()
+                if (debug) {
+                    StatusActivity.addMessage("[DBG] Config ${SettingsAndroid.SETTING_ANDROID_DEBUG.pref} = ${debug}")
+                }
+            }
+
+            for (s in SettingsAndroid.entries) {
+                val x = myConfig.getPref(s.name)
+                if (x != null) {
+                    when (s.type) {
+                        PrefType.STRING -> putString(s.pref, x as String)
+                        PrefType.NUMBER -> putString(s.pref, (x as Double).toInt().toString())
+                        PrefType.BOOLEAN -> putBoolean(s.pref, x as Boolean)
+                        else -> Log.e(TAG, "no type found for: $s.name")
+                    }
+                    if (s != SettingsAndroid.SETTING_ANDROID_DEBUG && sharedPreferences.getBoolean(KEY_DEBUG, false)) {
+                        StatusActivity.addMessage("[DBG] Config ${s.pref} = ${x}")
+                    }
+                    val p: EditTextPreference? = findPreference<EditTextPreference>(s.pref)
+                    if (p != null) {
+                        // Todo  p.text = x.toString()
+                    }
+                }
+            }
+            commit()
+        }
+    }
+
+    private fun hideMyConfigPrefs() {
+        val visible = true
+        findPreference<Preference>(KEY_DEVICE)?.isVisible = true
+        findPreference<Preference>(KEY_URL)?.isVisible = visible
+        findPreference<Preference>(KEY_INTERVAL)?.isVisible = visible
+        findPreference<Preference>(KEY_DISTANCE)?.isVisible = visible
+        findPreference<Preference>(KEY_ANGLE)?.isVisible = visible
+        findPreference<Preference>(KEY_ACCURACY)?.isVisible = visible
+        findPreference<Preference>(KEY_BUFFER)?.isVisible = visible
+        findPreference<Preference>(KEY_WAKELOCK)?.isVisible = visible
+    }
+
+    interface MyConfigService {
+        @GET("/api/my-config")
+        fun getMyConfig(@Query("uniqueId") uniqueId: String): Call<MyConfig>
+    }
+
+    data class MyConfig(
+        val device: Device,
+        val group: Group
+    ) {
+
+        fun getPref(key: String): Any? {
+            var x: Any? = device.attributes.get(key)
+            if (x == null) {
+                x = group.attributes.get(key)
+            }
+            return x
+        }
+    }
+
+    data class Device(
+        val id: Int,
+        val attributes: Map<String, Object>
+    )
+
+    data class Group(
+        val id: Int,
+        val attributes: Map<String, Object>
+    )
 }

@@ -51,4 +51,5 @@
   <string name="request_background_option">Allow all the time</string>
   <string name="widget_description">Shows the service status</string>
   <string name="widget_label">Status widget</string>
+  <string name="menu_back">Back</string>
 </resources>

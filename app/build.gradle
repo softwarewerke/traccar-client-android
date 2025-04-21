@@ -63,6 +63,9 @@ dependencies {
     implementation('dev.doubledot.doki:library:0.0.1@aar') {
         transitive = true
     }
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.9.0'
     testImplementation 'androidx.test:core:1.6.1'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.7.3'

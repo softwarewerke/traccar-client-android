@@ -53,6 +53,10 @@ class StatusActivity : AppCompatActivity() {
             clearMessages()
             return true
         }
+        if (item.itemId == R.id.back) {
+            finish()
+            return true
+        }
         return super.onOptionsItemSelected(item)
     }
 

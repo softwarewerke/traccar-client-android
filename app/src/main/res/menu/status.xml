@@ -8,4 +8,9 @@
         android:title="@string/menu_clear"
         app:showAsAction="always" />
 
+    <item
+        android:id="@+id/back"
+        android:title="@string/menu_back"
+        app:showAsAction="always" />
+
 </menu>

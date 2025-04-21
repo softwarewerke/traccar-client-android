@@ -29,28 +29,28 @@
         android:title="@string/settings_accuracy_title" />
 
     <EditTextPreference
-        android:defaultValue="300"
+        android:defaultValue="10"
         android:key="interval"
         android:inputType="number"
         android:summary="@string/settings_interval_summary"
         android:title="@string/settings_interval_title" />
 
     <EditTextPreference
-        android:defaultValue="0"
+        android:defaultValue="2"
         android:key="distance"
         android:inputType="number"
         android:summary="@string/settings_distance_summary"
         android:title="@string/settings_distance_title" />
 
     <EditTextPreference
-        android:defaultValue="0"
+        android:defaultValue="5"
         android:key="angle"
         android:inputType="number"
         android:summary="@string/settings_angle_summary"
         android:title="@string/settings_angle_title" />
 
     <CheckBoxPreference
-        android:defaultValue="true"
+        android:defaultValue="false"
         android:key="buffer"
         android:summaryOff="@string/settings_buffer_off_summary"
         android:summaryOn="@string/settings_buffer_on_summary"
